@@ -39,8 +39,9 @@ services:
       - --log=stdout
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-    volumes:
-      - ./tunnel/ngrok-policy.yml:/etc/ngrok/policy.yml:ro
+    configs:
+      - source: ngrok_policy
+        target: /etc/ngrok/policy.yml
     ports:
       # Панель запитів ngrok: http://localhost:4040
       - "127.0.0.1:4040:4040"
@@ -63,3 +64,18 @@ services:
 
 volumes:
   n8n_data:
+
+configs:
+  # Правило ngrok записане тут, а не окремим файлом: Docker Compose копіює його в контейнер,
+  # тож macOS не блокує читання, навіть коли папка лежить у «Завантаженнях».
+  # Пропускаємо з інтернету лише webhook-и n8n (робочі й тестові) і технічну перевірку.
+  # Усе інше (сторінка входу, API n8n) отримує 403.
+  ngrok_policy:
+    content: |
+      on_http_request:
+        - expressions:
+            - "!(req.url.path.startsWith('/webhook/') || req.url.path.startsWith('/webhook-test/') || req.url.path == '/healthz')"
+          actions:
+            - type: deny
+              config:
+                status_code: 403

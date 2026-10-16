@@ -89,7 +89,7 @@ if [ "$TUNNEL_OK" -eq 0 ]; then
     root_code="$(http_code "$PUBLIC/")"
     rest_code="$(http_code "$PUBLIC/rest/settings")"
     [ "$root_code" != "200" ] && [ "$rest_code" != "200" ]
-    pass_or_fail $? "Сторінка n8n закрита для інтернету" "Тунель пропускає зайве: перевір tunnel/ngrok-policy.yml або правила шляхів у Cloudflare"
+    pass_or_fail $? "Сторінка n8n закрита для інтернету" "Тунель пропускає зайве: перевір ngrok_policy у docker-compose.yml або правила шляхів у Cloudflare"
   fi
 fi
 
