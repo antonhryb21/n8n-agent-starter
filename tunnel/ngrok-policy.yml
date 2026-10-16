@@ -1,0 +1,9 @@
+# Пропускаємо з інтернету лише webhook-и n8n і технічну перевірку.
+# Усе інше (сторінка входу, API n8n) отримує 403.
+on_http_request:
+  - expressions:
+      - "!(req.url.path.startsWith('/webhook/') || req.url.path == '/healthz')"
+    actions:
+      - type: deny
+        config:
+          status_code: 403

@@ -38,9 +38,11 @@ if [ "${1:-}" = "--self-test" ]; then
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
   git -C "$tmp" init -q
-  printf 'TELEGRAM_BOT_TOKEN=1234567890:AA%s\n' "BCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh" > "$tmp/.env"
+  # Фейковий токен збирається з частин, щоб сам цей файл не виглядав як секрет.
+  fake="$(printf '%s:%s%s' 1234567890 AA "$(printf 'x%.0s' $(seq 1 33))")"
+  printf 'TELEGRAM_BOT_TOKEN=%s\n' "$fake" > "$tmp/.env"
   git -C "$tmp" add -f .env
-  printf 'token = "1234567890:AA%s"\n' "BCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh" > "$tmp/workflow.json"
+  printf 'token = "%s"\n' "$fake" > "$tmp/workflow.json"
   if check_repo "$tmp" >/dev/null; then
     fail "Самоперевірка: фейковий токен і .env мали бути знайдені"
     exit 1

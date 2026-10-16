@@ -43,6 +43,7 @@ if [ "$LOCAL_ONLY" -eq 1 ]; then
 fi
 
 PUBLIC="$(public_url)"
+TUNNEL_OK=1
 
 # T3: тунель з інтернету
 if [ -z "$PUBLIC" ]; then
@@ -50,7 +51,8 @@ if [ -z "$PUBLIC" ]; then
   FAILED=$((FAILED + 1))
 else
   [ "$(http_code "$PUBLIC/healthz")" = "200" ]
-  pass_or_fail $? "Тунель відповідає з інтернету ($PUBLIC)" "Перевір ключ і адресу тунелю через Setup.command, потім Stop і Start"
+  TUNNEL_OK=$?
+  pass_or_fail $TUNNEL_OK "Тунель відповідає з інтернету ($PUBLIC)" "Перевір ключ і адресу тунелю через Setup.command, потім Stop і Start"
 fi
 
 # T4: токен бота
@@ -79,8 +81,8 @@ else
   fi
 fi
 
-# T6: сторінка n8n закрита для інтернету
-if [ -n "$PUBLIC" ]; then
+# T6: сторінка n8n закрита для інтернету (має сенс, лише коли тунель працює)
+if [ "$TUNNEL_OK" -eq 0 ]; then
   if [ "$(tunnel_mode)" = "cloudflare-quick" ]; then
     warn "Сторінка n8n видна з інтернету (режим cloudflare-quick не вміє це обмежувати)" "Використовуй надійний пароль власника або повернись на ngrok"
   else
