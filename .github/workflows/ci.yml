@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Shellcheck (Q1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck scripts and tests
+        run: shellcheck -x scripts/*.sh tests/*.sh *.command .githooks/pre-commit
+
+  secrets:
+    name: Secrets (S1, S2, gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: secrets-check self-test
+        run: tests/secrets-check.sh --self-test
+      - name: secrets-check
+        run: tests/secrets-check.sh
+      - name: gitleaks (full history)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --redact --verbose
+
+  compose:
+    name: Compose config (Q2) and n8n health (T2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose for every tunnel mode
+        run: |
+          cp .env.example .env
+          for p in ngrok cloudflare-quick cloudflare-named; do
+            echo "== $p"
+            COMPOSE_PROFILES=$p docker compose config -q
+          done
+      - name: Start n8n without a tunnel
+        run: |
+          cp .env.example .env
+          sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=/' .env
+          sed -i "s/^N8N_ENCRYPTION_KEY=.*/N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)/" .env
+          docker compose up -d n8n
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:5678/healthz >/dev/null && break
+            sleep 2
+          done
+      - name: Smoke test (local)
+        run: tests/smoke.sh --local
+      - name: n8n logs on failure
+        if: failure()
+        run: docker compose logs n8n
