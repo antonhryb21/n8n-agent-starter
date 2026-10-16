@@ -1,0 +1,39 @@
+# 05. Тунелі Cloudflare
+
+Основний тунель пакета — ngrok. Cloudflare потрібен у двох випадках.
+
+## Cloudflare Quick Tunnel: запасний, без акаунта
+
+Коли: ngrok тимчасово недоступний або не вдається створити акаунт.
+
+1. Відкрий `.env` у TextEdit і зміни рядок на `COMPOSE_PROFILES=cloudflare-quick`.
+2. `Stop.command`, потім `Start.command`. Скрипт сам візьме нову адресу виду `щось.trycloudflare.com`.
+3. У n8n вимкни й увімкни перемикач **Active** у workflow.
+
+Обмеження:
+- адреса нова при кожному запуску, тож крок 3 доведеться повторювати;
+- сторінка входу n8n видна з інтернету (обмежити шляхи тут не можна), тому пароль власника обов'язково надійний;
+- Cloudflare не гарантує роботу Quick Tunnel і радить його лише для тестів.
+
+Повернутися на ngrok: `COMPOSE_PROFILES=ngrok`, потім `Stop` і `Start`.
+
+## Cloudflare Named Tunnel: найстабільніший, з власним доменом
+
+Коли: бот має працювати довго й надійно, або ти викладач. Потрібен домен, доданий у Cloudflare.
+
+1. Зайди в Cloudflare → **Zero Trust** → **Networks** → **Tunnels** → **Create a tunnel** → **Cloudflared**.
+2. Назви тунель, наприклад `n8n-course`. На кроці встановлення скопіюй **токен** (довгий рядок після `--token`). Встановлювати нічого не треба, це зробить Docker.
+3. На вкладці **Public Hostname** додай:
+   - **Subdomain:** `bot`, **Domain:** твій домен;
+   - **Path:** `webhook/.*`;
+   - **Service:** `HTTP` → `n8n:5678`.
+4. Додай ще один hostname з тим самим доменом, **Path:** `healthz`, **Service:** `HTTP` → `n8n:5678`.
+5. У `.env`:
+   ```
+   COMPOSE_PROFILES=cloudflare-named
+   CLOUDFLARE_TUNNEL_TOKEN=<токен з кроку 2>
+   CLOUDFLARE_HOSTNAME=bot.<твій домен>
+   ```
+6. `Stop.command`, `Start.command`, а потім `Check.command`.
+
+Адреса постійна, тож Telegram запам'ятовує її один раз. Інші шляхи (сторінка n8n) з інтернету не відкриваються, бо в тунелі для них немає правил.
