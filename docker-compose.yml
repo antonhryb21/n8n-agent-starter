@@ -1,0 +1,81 @@
+# n8n + тунель. Режим тунелю обирається змінною COMPOSE_PROFILES у .env:
+#   ngrok | cloudflare-quick | cloudflare-named
+# Запускай через Start.command / scripts/start.sh, а не напряму.
+name: n8n-agent-starter
+
+services:
+  n8n:
+    image: n8nio/n8n:2.43.7
+    restart: unless-stopped
+    ports:
+      # Лише для цього Mac, не для інших пристроїв у мережі.
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
+      N8N_PROXY_HOPS: "1"
+      # Safari не зберігає secure-cookie на http://localhost, і вхід у n8n не працює.
+      # Сторінка n8n доступна лише з цього Mac (порт 127.0.0.1), а тунель її не пропускає.
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Kyiv}
+      TZ: ${GENERIC_TIMEZONE:-Europe/Kyiv}
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+  ngrok:
+    image: ngrok/ngrok:3.39.11-alpine
+    profiles: [ngrok]
+    restart: unless-stopped
+    depends_on: [n8n]
+    command:
+      - http
+      - http://n8n:5678
+      - --url=https://${NGROK_DOMAIN:-missing.ngrok-free.app}
+      - --traffic-policy-file=/etc/ngrok/policy.yml
+      - --log=stdout
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    configs:
+      - source: ngrok_policy
+        target: /etc/ngrok/policy.yml
+    ports:
+      # Панель запитів ngrok: http://localhost:4040
+      - "127.0.0.1:4040:4040"
+
+  cloudflared-quick:
+    image: cloudflare/cloudflared:2026.10.1
+    profiles: [cloudflare-quick]
+    restart: unless-stopped
+    depends_on: [n8n]
+    command: tunnel --no-autoupdate --url http://n8n:5678
+
+  cloudflared-named:
+    image: cloudflare/cloudflared:2026.10.1
+    profiles: [cloudflare-named]
+    restart: unless-stopped
+    depends_on: [n8n]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+
+volumes:
+  n8n_data:
+
+configs:
+  # Правило ngrok записане тут, а не окремим файлом: Docker Compose копіює його в контейнер,
+  # тож macOS не блокує читання, навіть коли папка лежить у «Завантаженнях».
+  # Пропускаємо з інтернету лише webhook-и n8n (робочі й тестові) і технічну перевірку.
+  # Усе інше (сторінка входу, API n8n) отримує 403.
+  ngrok_policy:
+    content: |
+      on_http_request:
+        - expressions:
+            - "!(req.url.path.startsWith('/webhook/') || req.url.path.startsWith('/webhook-test/') || req.url.path == '/healthz')"
+          actions:
+            - type: deny
+              config:
+                status_code: 403

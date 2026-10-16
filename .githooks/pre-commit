@@ -1,0 +1,10 @@
+#!/bin/bash
+# Перевіряє коміт на секрети. Увімкнення: git config core.hooksPath .githooks
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner || {
+    echo "❌ gitleaks знайшов секрет у коміті. Прибери його (docs/04-security.md)."
+    exit 1
+  }
+fi
+exec tests/secrets-check.sh
