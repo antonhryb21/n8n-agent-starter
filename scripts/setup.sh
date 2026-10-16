@@ -33,6 +33,25 @@ ask() {
   fi
 }
 
+# ask_host KEY "Питання": як ask, але прибирає https:// і / та питає знову, доки не буде схоже на домен.
+ask_host() {
+  local key="$1" question="$2" value tries=0
+  while [ "$tries" -lt 5 ]; do
+    tries=$((tries + 1))
+    ask "$key" "$question"
+    eval "value=\${$key:-}"
+    value="${value#https://}"; value="${value#http://}"; value="${value%%/*}"
+    if is_hostname "$value"; then
+      set_env_var "$key" "$value"
+      eval "$key=\$value"
+      return 0
+    fi
+    warn "Це не схоже на адресу: «$(printf '%s' "$value" | cut -c1-40)»" "Скопіюй лише домен, наприклад bot-name.ngrok-free.app, без іншого тексту"
+    eval "$key=''"
+  done
+  die "Адресу так і не введено" "Запусти Setup.command ще раз"
+}
+
 ask TELEGRAM_BOT_TOKEN "1/3. Встав токен бота від @BotFather" secret
 case "${TELEGRAM_BOT_TOKEN:-}" in
   *:*) ;;
@@ -52,17 +71,11 @@ set_env_var COMPOSE_PROFILES "$mode"
 case "$mode" in
   ngrok)
     ask NGROK_AUTHTOKEN "2/3. Встав Authtoken з панелі ngrok (Your Authtoken)" secret
-    ask NGROK_DOMAIN "3/3. Встав адресу з розділу Domains у ngrok (щось.ngrok-free.app)"
-    domain="${NGROK_DOMAIN:-}"
-    domain="${domain#https://}"; domain="${domain#http://}"; domain="${domain%/}"
-    set_env_var NGROK_DOMAIN "$domain"
+    ask_host NGROK_DOMAIN "3/3. Встав адресу з розділу Domains у ngrok (щось.ngrok-free.app)"
     ;;
   cloudflare-named)
     ask CLOUDFLARE_TUNNEL_TOKEN "2/3. Встав токен тунелю Cloudflare (docs/05-cloudflare.md)" secret
-    ask CLOUDFLARE_HOSTNAME "3/3. Встав свою адресу в Cloudflare (напр. bot.example.com)"
-    host="${CLOUDFLARE_HOSTNAME:-}"
-    host="${host#https://}"; host="${host#http://}"; host="${host%/}"
-    set_env_var CLOUDFLARE_HOSTNAME "$host"
+    ask_host CLOUDFLARE_HOSTNAME "3/3. Встав свою адресу в Cloudflare (напр. bot.example.com)"
     ;;
   cloudflare-quick)
     say ""

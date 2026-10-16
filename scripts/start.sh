@@ -26,6 +26,10 @@ case "$mode" in
   *) die "Невідомий режим тунелю: $mode" "У .env має бути COMPOSE_PROFILES=ngrok, cloudflare-quick або cloudflare-named" ;;
 esac
 [ -z "$missing" ] || die "У .env бракує значень:$missing" "Двічі клацни Setup.command"
+case "$mode" in
+  ngrok) is_hostname "$NGROK_DOMAIN" || die "NGROK_DOMAIN у .env не схожий на адресу" "Двічі клацни Setup.command і встав лише домен, наприклад bot-name.ngrok-free.app" ;;
+  cloudflare-named) is_hostname "$CLOUDFLARE_HOSTNAME" || die "CLOUDFLARE_HOSTNAME у .env не схожий на адресу" "Двічі клацни Setup.command і встав лише домен, наприклад bot.example.com" ;;
+esac
 [ -n "${N8N_ENCRYPTION_KEY:-}" ] || die "У .env немає N8N_ENCRYPTION_KEY" "Двічі клацни Setup.command, він згенерує ключ"
 
 # load_env експортує змінні, а змінні оболонки для Docker Compose важливіші за .env,

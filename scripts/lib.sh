@@ -45,6 +45,11 @@ set_env_var() {
 }
 
 # Активний режим тунелю.
+# Чи схоже значення на доменне ім'я (bot.example.com), без https:// і пробілів.
+is_hostname() {
+  printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$'
+}
+
 tunnel_mode() { printf '%s' "${COMPOSE_PROFILES:-ngrok}"; }
 
 # Назва сервісу тунелю в docker-compose.yml для активного режиму.

@@ -40,6 +40,11 @@
 **Причина:** неправильний Authtoken або адреса ngrok у `.env`.
 **Що робити:** запусти `Setup.command` ще раз і встав значення заново (адресу без `https://`), потім `Stop.command` і `Start.command`.
 
+## ❌ n8n пише «Bad Request: invalid webhook URL specified»
+
+**Причина:** в адресі ngrok у `.env` випадковий текст замість домену. Це видно в Telegram Trigger: адреса webhook починається не з `https://щось.ngrok-free.app/`.
+**Що робити:** у [dashboard.ngrok.com/domains](https://dashboard.ngrok.com/domains) скопіюй лише домен, запусти `Setup.command` і встав його на кроці 3/3 (на інших кроках тисни Enter). Потім `Stop.command` і `Start.command`, у n8n натисни **Save** і ввімкни **Active**.
+
 ## ❌ Токен бота правильний
 
 **Причина:** токен скопійовано з помилкою або його замінили в BotFather.
