@@ -69,6 +69,24 @@ until [ "$(http_code http://localhost:5678/healthz)" = "200" ]; do
   sleep 2
 done
 
+# Тунель може впасти одразу після старту (неправильний ключ чи домен), тож показуємо його журнал.
+svc="$(tunnel_service)"
+sleep 3
+if ! compose ps --status running --services 2>/dev/null | grep -qx "$svc"; then
+  say ""
+  fail "Тунель ($svc) не запустився. Останні рядки його журналу:"
+  compose logs --tail 15 "$svc" 2>&1 | sed 's/^/   /'
+  logs="$(compose logs --tail 30 "$svc" 2>&1 || true)"
+  case "$logs" in
+    *authtoken*|*ERR_NGROK_105*|*ERR_NGROK_107*|*ERR_NGROK_4018*)
+      die "ngrok не прийняв Authtoken" "Скопіюй Your Authtoken з dashboard.ngrok.com і встав його через Setup.command, потім Start.command" ;;
+    *domain*|*hostname*|*ERR_NGROK_320*|*ERR_NGROK_334*)
+      die "ngrok не прийняв домен ${NGROK_DOMAIN:-}" "Перевір домен у dashboard.ngrok.com/domains і встав його через Setup.command, потім Start.command" ;;
+    *)
+      die "Тунель не працює" "Надішли ці рядки викладачу або подивись docs/03-troubleshooting.md" ;;
+  esac
+fi
+
 say ""
 ok "n8n готовий"
 say "   Редагування:       http://localhost:5678"
