@@ -28,8 +28,11 @@ esac
 [ -z "$missing" ] || die "У .env бракує значень:$missing" "Двічі клацни Setup.command"
 [ -n "${N8N_ENCRYPTION_KEY:-}" ] || die "У .env немає N8N_ENCRYPTION_KEY" "Двічі клацни Setup.command, він згенерує ключ"
 
+# load_env експортує змінні, а змінні оболонки для Docker Compose важливіші за .env,
+# тому нову адресу треба і записати у файл, і експортувати.
 if [ -n "$url" ]; then
   set_env_var WEBHOOK_URL "$url/"
+  export WEBHOOK_URL="$url/"
 fi
 
 say "🚀 Запускаю n8n і тунель ($mode)…"
@@ -47,6 +50,7 @@ if [ "$mode" = "cloudflare-quick" ]; then
   [ -n "$url" ] || die "Cloudflare не видав адресу" "Спробуй ще раз пізніше або повернись на ngrok (COMPOSE_PROFILES=ngrok)"
   old="${WEBHOOK_URL:-}"
   set_env_var WEBHOOK_URL "$url/"
+  export WEBHOOK_URL="$url/"
   if [ "$old" != "$url/" ]; then
     compose up -d n8n
     warn "Адреса тунелю нова: $url" "У n8n вимкни й увімкни перемикач Active у workflow, щоб Telegram дізнався нову адресу"
