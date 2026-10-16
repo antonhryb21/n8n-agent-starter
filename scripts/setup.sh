@@ -52,6 +52,21 @@ ask_host() {
   die "Адресу так і не введено" "Запусти Setup.command ще раз"
 }
 
+# Authtoken ngrok складається лише з літер, цифр і _, без пробілів і посилань.
+ask_ngrok_token() {
+  local tries=0
+  while [ "$tries" -lt 5 ]; do
+    tries=$((tries + 1))
+    ask NGROK_AUTHTOKEN "2/3. Встав Authtoken з панелі ngrok (Your Authtoken, кнопка Copy)" secret
+    if printf '%s' "${NGROK_AUTHTOKEN:-}" | grep -Eq '^[A-Za-z0-9_]{30,}$'; then
+      return 0
+    fi
+    warn "Це не схоже на Authtoken ngrok" "Відкрий dashboard.ngrok.com/get-started/your-authtoken і натисни Copy (потрібен Authtoken, не API Key)"
+    NGROK_AUTHTOKEN=""
+  done
+  die "Authtoken так і не введено" "Запусти Setup.command ще раз"
+}
+
 ask TELEGRAM_BOT_TOKEN "1/3. Встав токен бота від @BotFather" secret
 case "${TELEGRAM_BOT_TOKEN:-}" in
   *:*) ;;
@@ -70,7 +85,7 @@ set_env_var COMPOSE_PROFILES "$mode"
 
 case "$mode" in
   ngrok)
-    ask NGROK_AUTHTOKEN "2/3. Встав Authtoken з панелі ngrok (Your Authtoken)" secret
+    ask_ngrok_token
     ask_host NGROK_DOMAIN "3/3. Встав адресу з розділу Domains у ngrok (щось.ngrok-free.app)"
     ;;
   cloudflare-named)
