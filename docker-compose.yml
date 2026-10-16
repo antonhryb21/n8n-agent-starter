@@ -17,6 +17,9 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
       N8N_PROXY_HOPS: "1"
+      # Safari не зберігає secure-cookie на http://localhost, і вхід у n8n не працює.
+      # Сторінка n8n доступна лише з цього Mac (порт 127.0.0.1), а тунель її не пропускає.
+      N8N_SECURE_COOKIE: "false"
       N8N_DIAGNOSTICS_ENABLED: "false"
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Kyiv}
       TZ: ${GENERIC_TIMEZONE:-Europe/Kyiv}

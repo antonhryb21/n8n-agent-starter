@@ -18,6 +18,11 @@
 **Причина:** файл втратив позначку "виконуваний" (буває з деякими архіваторами).
 **Що робити:** відкрий **Terminal**, введи `chmod +x ` (з пробілом наприкінці), перетягни в це вікно папку пакета, допиши `/*.command /scripts/*.sh /tests/*.sh` і натисни Enter.
 
+## "Your n8n server is configured to use a secure cookie…"
+
+**Причина:** стара версія `docker-compose.yml` і браузер Safari, який не приймає захищені cookie на `http://localhost`.
+**Що робити:** відкрий `http://localhost:5678` у Chrome або Firefox. Або візьми свіжий `docker-compose.yml` з репозиторію, потім `Stop.command` і `Start.command`.
+
 ## ❌ Docker запущений
 
 **Причина:** Docker Desktop закритий або ще стартує.
