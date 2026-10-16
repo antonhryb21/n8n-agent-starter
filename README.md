@@ -18,7 +18,7 @@ Telegram  →  тунель (HTTPS)  →  n8n на твоєму Mac  →  від
 1. **Встанови Docker Desktop** і запусти його. → [docs/01-setup.md](docs/01-setup.md#1-docker-desktop)
 2. **Створи бота** в @BotFather і скопіюй токен. → [docs/01-setup.md](docs/01-setup.md#2-telegram-бот)
 3. **Візьми ключ і адресу ngrok.** → [docs/01-setup.md](docs/01-setup.md#3-ngrok)
-4. **Двічі клацни `Setup.command`** і встав три значення.
+4. **Зніми блокування macOS** з папки пакета (одна команда) → [docs/01-setup.md](docs/01-setup.md#4-завантаж-пакет), потім **двічі клацни `Setup.command`** і встав три значення.
 5. **Двічі клацни `Start.command`**, потім підключи перший workflow. → [docs/02-first-workflow.md](docs/02-first-workflow.md)
 
 Напиши боту "привіт". Якщо він відповів, усе працює 🎉

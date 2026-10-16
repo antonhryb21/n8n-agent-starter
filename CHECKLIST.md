@@ -39,7 +39,7 @@
 - [x] **R1** ngrok free: Traffic Policy доступна (до 5 правил) → deny усього, крім `/webhook/*` і `/healthz`. Cloudflare Named: правила шляхів у панелі. Cloudflare Quick: обмежити не можна, задокументовано
 - [x] **R2** Як Telegram Trigger у зафіксованій версії n8n реєструє webhook з `WEBHOOK_URL`; різниця test/production URL → висновок у ТЗ
 - [x] **R3** Вимоги Docker Desktop до Mac, сумісність з OrbStack → у docs/01-setup
-- [x] **R4** Як Gatekeeper поводиться з `.command` з ZIP і з git clone → у docs/03-troubleshooting
+- [x] **R4** Gatekeeper на новій macOS блокує `.command` з ZIP, обхід через праву кнопку не працює (підтверджено на Mac Антона 2026-10-16) → крок `xattr -dr com.apple.quarantine` у docs/01-setup і docs/03-troubleshooting
 - [x] **R5** ngrok free: 20 000 запитів і 1 ГБ на місяць, 1 dev domain `*.ngrok-free.app`, сторінка-попередження лише для браузерів. Поточні ліміти ngrok free і сторінка-попередження → у INFRASTRUCTURE.md §9
 - [x] Версії: `n8nio/n8n:2.43.7` (stable), `ngrok/ngrok:3.39.11-alpine`, `cloudflare/cloudflared:2026.10.1`
 - [x] Оновити INFRASTRUCTURE.md, якщо висновки щось змінили
