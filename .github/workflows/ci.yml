@@ -55,6 +55,12 @@ jobs:
           done
       - name: Smoke test (local)
         run: tests/smoke.sh --local
+      - name: Workflow files are well-formed (W1)
+        run: tests/workflows-check.sh
+      - name: Workflow files import into n8n (W2)
+        run: |
+          docker compose cp workflows/. n8n:/tmp/workflows/
+          docker compose exec -T n8n n8n import:workflow --separate --input=/tmp/workflows/
       - name: n8n logs on failure
         if: failure()
         run: docker compose logs n8n

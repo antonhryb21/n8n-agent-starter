@@ -1,0 +1,702 @@
+{
+  "name": "Ліди з Google Таблиці → Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "690a2ac8-8806-563a-ac35-a25642d166ab",
+      "name": "Кожну хвилину",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "52f49d03-0f93-50ce-866e-d3ea4c61db61",
+              "name": "sheetUrl",
+              "value": "ВСТАВ_СЮДИ_ПОСИЛАННЯ_НА_ТАБЛИЦЮ",
+              "type": "string"
+            },
+            {
+              "id": "51d47aa6-997b-50ac-9ff6-67b463343a4c",
+              "name": "sheetName",
+              "value": "Аркуш1",
+              "type": "string"
+            },
+            {
+              "id": "09aaf0d9-2fdd-5c97-b510-a85cbc023bf1",
+              "name": "chatId",
+              "value": "ВСТАВ_СЮДИ_CHAT_ID",
+              "type": "string"
+            },
+            {
+              "id": "a8a8b8a5-a77d-5bfc-a545-3474e3b613fa",
+              "name": "startRow",
+              "value": 2,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "99b8abbc-ad20-5c34-b120-a32fdf4ce92a",
+      "name": "Налаштування",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "id": "768a1019-b31f-53b2-9cba-37ffda550848",
+      "name": "Прочитати таблицю",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        700,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Нові ліди: рядки без позначки в стовпці «Telegram», починаючи з рядка startRow.\nconst cfg = $('Налаштування').first().json;\nconst startRow = Number(cfg.startRow) || 2;\nconst MAX_PER_RUN = 20; // решта піде наступної хвилини\n\n// Підписи для типових стовпців Meta Lead Ads. Інші стовпці показуються під своїми назвами.\nconst LABELS = {\n  created_time: '🕘 Створено',\n  full_name: \"👤 Ім'я\", first_name: \"👤 Ім'я\", last_name: '👤 Прізвище',\n  phone_number: '📞 Телефон', phone: '📞 Телефон', email: '✉️ Email',\n  city: '🏙 Місто', country: '📍 Країна',\n  campaign_name: '📣 Кампанія', adset_name: '📣 Група оголошень', ad_name: '📣 Оголошення',\n  form_name: '📝 Форма', platform: '📱 Платформа',\n};\n// Службові стовпці, які в повідомленні не потрібні.\nconst SKIP = new Set(['row_number', 'Telegram', 'Статус', 'Обновил', 'Обновлено',\n  'id', 'ad_id', 'adset_id', 'campaign_id', 'form_id', 'is_organic']);\n\nconst clean = (key, value) => {\n  const text = String(value).replace(/^p:/, '').trim(); // Meta додає \"p:\" перед телефоном\n  if (key === 'created_time') {\n    const date = DateTime.fromISO(text);\n    if (date.isValid) return date.toFormat('dd.MM.yyyy HH:mm');\n  }\n  return text;\n};\nconst filled = ([key, value]) => !SKIP.has(key) && String(value ?? '').trim() !== '';\n\nconst leads = $input.all()\n  .map(item => item.json)\n  .filter(row => row.row_number >= startRow && String(row['Telegram'] ?? '').trim() === '')\n  .filter(row => Object.entries(row).some(filled))\n  .slice(0, MAX_PER_RUN);\n\nreturn leads.map(row => {\n  const lines = Object.entries(row)\n    .filter(filled)\n    .map(([key, value]) => `${LABELS[key] || key}: ${clean(key, value)}`);\n  return { json: { row_number: row.row_number, text: '🔥 Новий лід\\n\\n' + lines.join('\\n') } };\n});\n"
+      },
+      "id": "fbe6df8c-357e-5fb1-bb67-4f3eb670150b",
+      "name": "Нові ліди",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Налаштування').first().json.chatId }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💬 Contacted",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|contacted"
+                    }
+                  },
+                  {
+                    "text": "⭐ Lead (Qualified)",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|qualified"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "No answer",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|no_answer"
+                    }
+                  },
+                  {
+                    "text": "Follow-up",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|follow_up"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Job inquiry",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|job"
+                    }
+                  },
+                  {
+                    "text": "Not relevant",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|not_relevant"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Spam",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|spam"
+                    }
+                  },
+                  {
+                    "text": "Supplier",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|supplier"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c09a5893-31a4-522e-8ad7-7de0267f671b",
+      "name": "Надіслати в Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1140,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Нові ліди').item.json.row_number }}",
+            "Telegram": "={{ $now.toFormat('dd.MM.yyyy HH:mm') }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram",
+              "displayName": "Telegram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "bd42ff3a-1f51-52e9-b2e8-b99cb01df645",
+      "name": "Позначити надісланим",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "1c33b579-1e5c-56d5-a0ee-5d4427ff4a93",
+      "name": "Повідомлення боту",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "ec424f55-945d-5e29-8fc8-4897502f9c7e"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "42c06095-c825-51c6-a513-dd91c9728f67",
+                    "leftValue": "={{ $json.callback_query !== undefined }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Кнопка"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ffb66aeb-7fe8-56c1-aa50-5e23b7e72a29",
+                    "leftValue": "={{ $json.message !== undefined }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Повідомлення"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Перевірити таблицю"
+        }
+      },
+      "id": "03550a64-0ec6-5eee-b906-c74fb9154641",
+      "name": "Що сталося",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Натискання кнопки статусу: callback_data = \"st|<номер рядка>|<код статусу>\".\nconst STATUS = {\n  contacted: 'Contacted',\n  qualified: 'Lead (Qualified)',\n  no_answer: 'No answer',\n  follow_up: 'Follow-up',\n  job: 'Job inquiry',\n  not_relevant: 'Not relevant',\n  spam: 'Spam',\n  supplier: 'Supplier',\n};\nconst q = $('Повідомлення боту').first().json.callback_query;\nconst [, row, code] = String(q.data || '').split('|');\nconst status = STATUS[code] || code;\nconst who = q.from.username ? '@' + q.from.username : [q.from.first_name, q.from.last_name].filter(Boolean).join(' ');\nconst when = $now.toFormat('dd.MM.yyyy HH:mm');\n\n// Текст ліда без попереднього блоку статусу + новий блок.\nconst leadText = String(q.message?.text || '').split('\\n\\n📋 Статус:')[0];\nconst text = `${leadText}\\n\\n📋 Статус: ${status}\\n👤 Обновил: ${who}\\n🕘 Обновлено: ${when}`;\n\nreturn [{ json: {\n  row_number: Number(row), status, who, when, text,\n  chatId: q.message.chat.id, messageId: q.message.message_id, queryId: q.id,\n} }];\n"
+      },
+      "id": "057f81d4-ceeb-5eee-af75-0d262de5e513",
+      "name": "Розібрати натискання",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Статус": "={{ $json.status }}",
+            "Обновил": "={{ $json.who }}",
+            "Обновлено": "={{ $json.when }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Обновил",
+              "displayName": "Обновил",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Обновлено",
+              "displayName": "Обновлено",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "b3138484-87e8-59a5-93d2-d4d5caa89f24",
+      "name": "Записати статус",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        920,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Розібрати натискання').item.json.chatId }}",
+        "messageId": "={{ $('Розібрати натискання').item.json.messageId }}",
+        "text": "={{ $('Розібрати натискання').item.json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💬 Contacted",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|contacted"
+                    }
+                  },
+                  {
+                    "text": "⭐ Lead (Qualified)",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|qualified"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "No answer",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|no_answer"
+                    }
+                  },
+                  {
+                    "text": "Follow-up",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|follow_up"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Job inquiry",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|job"
+                    }
+                  },
+                  {
+                    "text": "Not relevant",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|not_relevant"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Spam",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|spam"
+                    }
+                  },
+                  {
+                    "text": "Supplier",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|supplier"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "ae88d103-260f-56e4-9aae-cfc4f63f1b2b",
+      "name": "Оновити повідомлення",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1140,
+        -80
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Розібрати натискання').item.json.queryId }}",
+        "additionalFields": {
+          "text": "=Статус: {{ $('Розібрати натискання').item.json.status }}"
+        }
+      },
+      "id": "8c0decff-7e69-5e68-b012-381a584d5480",
+      "name": "Відповісти на натискання",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=Chat ID цього чату: {{ $json.message.chat.id }}\n\nСкопіюй його у вузол «Налаштування» → chatId, і ліди приходитимуть сюди.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "11bc1ca1-992f-588f-b2c6-61462905f8b4",
+      "name": "Відповісти chat ID",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Кожну хвилину": {
+      "main": [
+        [
+          {
+            "node": "Налаштування",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Налаштування": {
+      "main": [
+        [
+          {
+            "node": "Що сталося",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Прочитати таблицю": {
+      "main": [
+        [
+          {
+            "node": "Нові ліди",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нові ліди": {
+      "main": [
+        [
+          {
+            "node": "Надіслати в Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Надіслати в Telegram": {
+      "main": [
+        [
+          {
+            "node": "Позначити надісланим",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Повідомлення боту": {
+      "main": [
+        [
+          {
+            "node": "Налаштування",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Що сталося": {
+      "main": [
+        [
+          {
+            "node": "Розібрати натискання",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Відповісти chat ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Прочитати таблицю",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Розібрати натискання": {
+      "main": [
+        [
+          {
+            "node": "Записати статус",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Записати статус": {
+      "main": [
+        [
+          {
+            "node": "Оновити повідомлення",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Оновити повідомлення": {
+      "main": [
+        [
+          {
+            "node": "Відповісти на натискання",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

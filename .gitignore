@@ -2,6 +2,9 @@
 .env
 *.env.local
 .env.*.local
+# Google service account keys (keep them out of the package folder)
+*service-account*.json
+*serviceaccount*.json
 
 # Local runtime data
 n8n_data/

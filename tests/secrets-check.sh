@@ -4,8 +4,8 @@ set -u
 # shellcheck source=../scripts/lib.sh
 . "$(dirname "$0")/../scripts/lib.sh"
 
-# Шаблони токенів: Telegram, ngrok authtoken, Cloudflare tunnel token.
-PATTERNS='[0-9]{8,10}:AA[A-Za-z0-9_-]{33}|[0-9][A-Za-z0-9]{25,27}_[A-Za-z0-9]{20,22}|eyJh[A-Za-z0-9_-]{80,}'
+# Шаблони токенів: Telegram, ngrok authtoken, Cloudflare tunnel token, приватний ключ (Google service account).
+PATTERNS='[0-9]{8,10}:AA[A-Za-z0-9_-]{33}|[0-9][A-Za-z0-9]{25,27}_[A-Za-z0-9]{20,22}|eyJh[A-Za-z0-9_-]{80,}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
 
 check_repo() {
   local dir="$1" failed=0
@@ -47,7 +47,15 @@ if [ "${1:-}" = "--self-test" ]; then
     fail "Самоперевірка: фейковий токен і .env мали бути знайдені"
     exit 1
   fi
-  ok "Самоперевірка: фейковий токен і .env знайдено"
+  # Ключ сервісного акаунта Google у файлі без .env.
+  rm -rf "$tmp/.git" "$tmp/.env" "$tmp/workflow.json"
+  git -C "$tmp" init -q
+  printf '{"private_key": "-----%s PRIVATE KEY-----\\nMIIE\\n"}\n' BEGIN > "$tmp/key.json"
+  if check_repo "$tmp" >/dev/null; then
+    fail "Самоперевірка: фейковий приватний ключ мав бути знайдений"
+    exit 1
+  fi
+  ok "Самоперевірка: фейковий токен, приватний ключ і .env знайдено"
   exit 0
 fi
 

@@ -44,6 +44,7 @@ Telegram  →  тунель (HTTPS)  →  n8n на твоєму Mac  →  від
 - [docs/03-troubleshooting.md](docs/03-troubleshooting.md): типові проблеми.
 - [docs/04-security.md](docs/04-security.md): секрети й безпека.
 - [docs/05-cloudflare.md](docs/05-cloudflare.md): альтернативні тунелі Cloudflare.
+- [docs/06-google-sheets.md](docs/06-google-sheets.md): ліди з Google Таблиці (наприклад, з Meta Lead Ads) приходять у Telegram.
 
 ## Безпека в одному реченні
 
