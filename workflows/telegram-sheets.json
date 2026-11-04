@@ -1,0 +1,484 @@
+{
+  "name": "Telegram → Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "108fdf12-06c2-5e7a-9567-e392c12889fb",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "0428ee92-f0ee-5156-8dce-e144262821fd"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4f8cc346-dbd3-5201-bb5a-c2066217f656",
+              "name": "sheetUrl",
+              "value": "ВСТАВ_СЮДИ_ПОСИЛАННЯ_НА_ТАБЛИЦЮ",
+              "type": "string"
+            },
+            {
+              "id": "10757835-1b46-5944-9140-24c7fb6cf323",
+              "name": "sheetName",
+              "value": "Повідомлення",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bbbf2f45-789b-5043-8120-60dc399b3081",
+      "name": "Налаштування",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text || '' }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "empty",
+                      "singleValue": true
+                    },
+                    "id": "81e8f9e3-ead8-539c-a76b-2592765dd7b1",
+                    "rightValue": ""
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Не текст"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text || '' }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "e2a09014-0e06-56e0-a9a2-23272cd7cdb2",
+                    "rightValue": "^/(start|help)\\b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Довідка"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text || '' }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "id": "da840b26-6352-51a4-9c0e-a83702adca82",
+                    "rightValue": "^/list\\b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Список"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Записати"
+        }
+      },
+      "id": "1945d8fe-e74a-5037-b14c-ba57caaafb0a",
+      "name": "Що робити",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df03bf68-5948-5954-95f0-db002662de18",
+              "name": "reply",
+              "value": "=Я поки вмію записувати лише текст. Надішли повідомлення словами.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4f3f35e8-749f-5f38-916f-66e69e5a08f4",
+      "name": "Текст не знайдено",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "54208e5a-df3c-5513-986a-6c513cd62629",
+              "name": "reply",
+              "value": "=Привіт! Я записую твої повідомлення в Google Таблицю.\n\n• Надішли будь-який текст, і я додам його новим рядком.\n• /list покаже 5 твоїх останніх записів.\n• /help покаже цю підказку.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5f8709b5-46a4-5cce-8d6c-53f2c7c6d6f1",
+      "name": "Підказка",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "id": "82cb0533-fed6-523f-a6a0-c7f6ebc6e923",
+      "name": "Прочитати рядки",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        700,
+        280
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Беремо лише рядки цього чату і показуємо 5 останніх.\nconst chatId = String($('Telegram Trigger').first().json.message.chat.id);\nconst rows = $input.all()\n  .map(item => item.json)\n  .filter(row => row['Текст'] !== undefined && String(row['Chat ID']) === chatId);\n\nif (rows.length === 0) {\n  return [{ json: { reply: 'У таблиці поки немає твоїх записів. Надішли мені будь-який текст.' } }];\n}\n\nconst lines = rows.slice(-5).map(row => `• ${row['Дата']}: ${row['Текст']}`);\nreturn [{ json: { reply: 'Твої останні записи:\\n' + lines.join('\\n') } }];\n"
+      },
+      "id": "c85bbafb-aca4-5e85-8180-e76bfaab84b3",
+      "name": "Останні записи",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Дата": "={{ $now.toFormat('yyyy-MM-dd HH:mm') }}",
+            "Chat ID": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+            "Користувач": "={{ [$('Telegram Trigger').item.json.message.from.first_name, $('Telegram Trigger').item.json.message.from.last_name].filter(Boolean).join(' ') }}",
+            "Username": "={{ $('Telegram Trigger').item.json.message.from.username ? '@' + $('Telegram Trigger').item.json.message.from.username : '' }}",
+            "Текст": "={{ $('Telegram Trigger').item.json.message.text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Дата",
+              "displayName": "Дата",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Користувач",
+              "displayName": "Користувач",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Текст",
+              "displayName": "Текст",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "46bd81b5-47d2-5bd9-bad8-8ba8215b8266",
+      "name": "Додати рядок",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        700,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f6de74ba-6bfc-5669-a08d-ccc2e5bad901",
+              "name": "reply",
+              "value": "=Записано в таблицю ✅\nПодивитись останні записи: /list",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dec9dc3b-ffa0-5973-9b3c-9d543bb48f1d",
+      "name": "Підтвердження",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        920,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b8c827d1-950d-51d4-abf9-a3cd637f708e",
+      "name": "Відповідь",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1160,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Налаштування",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Налаштування": {
+      "main": [
+        [
+          {
+            "node": "Що робити",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Що робити": {
+      "main": [
+        [
+          {
+            "node": "Текст не знайдено",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Підказка",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Прочитати рядки",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Додати рядок",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Текст не знайдено": {
+      "main": [
+        [
+          {
+            "node": "Відповідь",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Підказка": {
+      "main": [
+        [
+          {
+            "node": "Відповідь",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Прочитати рядки": {
+      "main": [
+        [
+          {
+            "node": "Останні записи",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Останні записи": {
+      "main": [
+        [
+          {
+            "node": "Відповідь",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Додати рядок": {
+      "main": [
+        [
+          {
+            "node": "Підтвердження",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Підтвердження": {
+      "main": [
+        [
+          {
+            "node": "Відповідь",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

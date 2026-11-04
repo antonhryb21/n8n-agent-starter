@@ -11,10 +11,11 @@
 | `CLOUDFLARE_TUNNEL_TOKEN` | запуск твого тунелю Cloudflare |
 | `N8N_ENCRYPTION_KEY` | розшифрування збережених у n8n паролів |
 | пароль власника n8n | вхід у твій n8n |
+| JSON-ключ сервісного акаунта Google | читання й зміну таблиць, якими ти з ним поділився ([06-google-sheets.md](06-google-sheets.md#безпека)) |
 
 ## Правила
 
-1. **Секрети живуть тільки у `.env`** на твоєму Mac. Файл створює `Setup.command`.
+1. **Секрети живуть тільки у `.env`** на твоєму Mac. Файл створює `Setup.command`. Виняток: ключ Google зберігається лише в n8n.
 2. **`.env` ніколи не потрапляє в git.** Він записаний у `.gitignore`.
 3. **Не надсилай секрети** в чати, пошту, скріншоти, документи. На скріншотах зафарбовуй токени.
 4. **Не губи `N8N_ENCRYPTION_KEY`.** Без нього n8n не прочитає збережені credentials. Зроби копію `.env` у менеджер паролів.
@@ -27,6 +28,7 @@
 - **Токен бота:** @BotFather → `/mybots` → бот → **API Token** → **Revoke current token**. Встав новий через `Setup.command` і в n8n (**Credentials**).
 - **ngrok:** панель ngrok → **Your Authtoken** → **Reset**. Встав новий через `Setup.command`.
 - **Cloudflare:** панель Cloudflare → тунель → **Refresh token**. Онови `.env`.
+- **Ключ Google:** Google Cloud → **Service Accounts** → акаунт → **Keys** → видали старий ключ, створи новий і встав у n8n (**Credentials**).
 
 Після заміни: `Stop.command`, потім `Start.command`.
 
