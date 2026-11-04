@@ -1,0 +1,291 @@
+{
+  "name": "Ліди з Google Таблиці → Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "690a2ac8-8806-563a-ac35-a25642d166ab",
+      "name": "Кожну хвилину",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "52f49d03-0f93-50ce-866e-d3ea4c61db61",
+              "name": "sheetUrl",
+              "value": "ВСТАВ_СЮДИ_ПОСИЛАННЯ_НА_ТАБЛИЦЮ",
+              "type": "string"
+            },
+            {
+              "id": "51d47aa6-997b-50ac-9ff6-67b463343a4c",
+              "name": "sheetName",
+              "value": "Аркуш1",
+              "type": "string"
+            },
+            {
+              "id": "09aaf0d9-2fdd-5c97-b510-a85cbc023bf1",
+              "name": "chatId",
+              "value": "ВСТАВ_СЮДИ_CHAT_ID",
+              "type": "string"
+            },
+            {
+              "id": "a8a8b8a5-a77d-5bfc-a545-3474e3b613fa",
+              "name": "startRow",
+              "value": 2,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "99b8abbc-ad20-5c34-b120-a32fdf4ce92a",
+      "name": "Налаштування",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "filtersUI": {},
+        "options": {}
+      },
+      "id": "768a1019-b31f-53b2-9cba-37ffda550848",
+      "name": "Прочитати таблицю",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Нові ліди: рядки без позначки в стовпці «Telegram», починаючи з рядка startRow.\nconst cfg = $('Налаштування').first().json;\nconst startRow = Number(cfg.startRow) || 2;\nconst MAX_PER_RUN = 20; // решта піде наступної хвилини\n\n// Підписи для типових стовпців Meta Lead Ads. Інші стовпці показуються під своїми назвами.\nconst LABELS = {\n  full_name: \"Ім'я\", first_name: \"Ім'я\", last_name: 'Прізвище',\n  phone_number: 'Телефон', phone: 'Телефон', email: 'Email',\n  city: 'Місто', created_time: 'Створено',\n  campaign_name: 'Кампанія', adset_name: 'Група оголошень', ad_name: 'Оголошення',\n  form_name: 'Форма', platform: 'Платформа',\n};\n// Технічні стовпці, які в повідомленні не потрібні.\nconst SKIP = new Set(['row_number', 'Telegram', 'id', 'ad_id', 'adset_id', 'campaign_id', 'form_id', 'is_organic']);\n\nconst clean = value => String(value).replace(/^p:/, '').trim(); // Meta додає \"p:\" перед телефоном\n\nconst leads = $input.all()\n  .map(item => item.json)\n  .filter(row => row.row_number >= startRow && String(row['Telegram'] ?? '').trim() === '')\n  .filter(row => Object.entries(row).some(([k, v]) => !SKIP.has(k) && String(v ?? '').trim() !== ''))\n  .slice(0, MAX_PER_RUN);\n\nreturn leads.map(row => {\n  const lines = Object.entries(row)\n    .filter(([key, value]) => !SKIP.has(key) && String(value ?? '').trim() !== '')\n    .map(([key, value]) => `${LABELS[key] || key}: ${clean(value)}`);\n  return { json: { row_number: row.row_number, text: '🔥 Новий лід\\n\\n' + lines.join('\\n') } };\n});\n"
+      },
+      "id": "fbe6df8c-357e-5fb1-bb67-4f3eb670150b",
+      "name": "Нові ліди",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Налаштування').first().json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c09a5893-31a4-522e-8ad7-7de0267f671b",
+      "name": "Надіслати в Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Нові ліди').item.json.row_number }}",
+            "Telegram": "={{ $now.toFormat('yyyy-MM-dd HH:mm') }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram",
+              "displayName": "Telegram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "bd42ff3a-1f51-52e9-b2e8-b99cb01df645",
+      "name": "Позначити надісланим",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "1c33b579-1e5c-56d5-a0ee-5d4427ff4a93",
+      "name": "Повідомлення боту",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        260
+      ],
+      "webhookId": "ec424f55-945d-5e29-8fc8-4897502f9c7e"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=Chat ID цього чату: {{ $json.message.chat.id }}\n\nСкопіюй його у вузол «Налаштування» → chatId, і ліди приходитимуть сюди.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "11bc1ca1-992f-588f-b2c6-61462905f8b4",
+      "name": "Відповісти chat ID",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Кожну хвилину": {
+      "main": [
+        [
+          {
+            "node": "Налаштування",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Налаштування": {
+      "main": [
+        [
+          {
+            "node": "Прочитати таблицю",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Прочитати таблицю": {
+      "main": [
+        [
+          {
+            "node": "Нові ліди",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нові ліди": {
+      "main": [
+        [
+          {
+            "node": "Надіслати в Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Надіслати в Telegram": {
+      "main": [
+        [
+          {
+            "node": "Позначити надісланим",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Повідомлення боту": {
+      "main": [
+        [
+          {
+            "node": "Відповісти chat ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
