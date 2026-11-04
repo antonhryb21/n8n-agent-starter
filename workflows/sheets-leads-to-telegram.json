@@ -51,6 +51,7 @@
             }
           ]
         },
+        "includeOtherFields": true,
         "options": {}
       },
       "id": "99b8abbc-ad20-5c34-b120-a32fdf4ce92a",
@@ -59,7 +60,7 @@
       "typeVersion": 3.4,
       "position": [
         220,
-        0
+        120
       ]
     },
     {
@@ -84,8 +85,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        440,
-        0
+        700,
+        320
       ]
     },
     {
@@ -97,8 +98,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        660,
-        0
+        920,
+        320
       ]
     },
     {
@@ -191,8 +192,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        880,
-        0
+        1140,
+        320
       ]
     },
     {
@@ -250,8 +251,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1100,
-        0
+        1360,
+        320
       ]
     },
     {
@@ -268,42 +269,78 @@
       "typeVersion": 1.2,
       "position": [
         0,
-        300
+        240
       ],
       "webhookId": "ec424f55-945d-5e29-8fc8-4897502f9c7e"
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
+        "rules": {
+          "values": [
             {
-              "id": "420c8a8c-d12b-5799-85d9-4ef5cc87243e",
-              "leftValue": "={{ $json.callback_query !== undefined }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "42c06095-c825-51c6-a513-dd91c9728f67",
+                    "leftValue": "={{ $json.callback_query !== undefined }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Кнопка"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ffb66aeb-7fe8-56c1-aa50-5e23b7e72a29",
+                    "leftValue": "={{ $json.message !== undefined }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Повідомлення"
             }
-          ],
-          "combinator": "and"
+          ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Перевірити таблицю"
+        }
       },
-      "id": "82902c6f-24a6-580a-915d-b45afc9b2928",
-      "name": "Натиснули кнопку?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
+      "id": "03550a64-0ec6-5eee-b906-c74fb9154641",
+      "name": "Що сталося",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
       "position": [
-        220,
-        300
+        440,
+        120
       ]
     },
     {
@@ -315,8 +352,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
-        220
+        700,
+        -80
       ]
     },
     {
@@ -394,8 +431,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        660,
-        220
+        920,
+        -80
       ]
     },
     {
@@ -488,8 +525,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        880,
-        220
+        1140,
+        -80
       ],
       "onError": "continueRegularOutput"
     },
@@ -506,8 +543,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1100,
-        220
+        1360,
+        -80
       ]
     },
     {
@@ -523,8 +560,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        440,
-        400
+        700,
+        120
       ]
     }
   ],
@@ -544,7 +581,7 @@
       "main": [
         [
           {
-            "node": "Прочитати таблицю",
+            "node": "Що сталося",
             "type": "main",
             "index": 0
           }
@@ -588,14 +625,14 @@
       "main": [
         [
           {
-            "node": "Натиснули кнопку?",
+            "node": "Налаштування",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Натиснули кнопку?": {
+    "Що сталося": {
       "main": [
         [
           {
@@ -607,6 +644,13 @@
         [
           {
             "node": "Відповісти chat ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Прочитати таблицю",
             "type": "main",
             "index": 0
           }
