@@ -90,7 +90,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Нові ліди: рядки без позначки в стовпці «Telegram», починаючи з рядка startRow.\nconst cfg = $('Налаштування').first().json;\nconst startRow = Number(cfg.startRow) || 2;\nconst MAX_PER_RUN = 20; // решта піде наступної хвилини\n\n// Підписи для типових стовпців Meta Lead Ads. Інші стовпці показуються під своїми назвами.\nconst LABELS = {\n  full_name: \"Ім'я\", first_name: \"Ім'я\", last_name: 'Прізвище',\n  phone_number: 'Телефон', phone: 'Телефон', email: 'Email',\n  city: 'Місто', created_time: 'Створено',\n  campaign_name: 'Кампанія', adset_name: 'Група оголошень', ad_name: 'Оголошення',\n  form_name: 'Форма', platform: 'Платформа',\n};\n// Технічні стовпці, які в повідомленні не потрібні.\nconst SKIP = new Set(['row_number', 'Telegram', 'id', 'ad_id', 'adset_id', 'campaign_id', 'form_id', 'is_organic']);\n\nconst clean = value => String(value).replace(/^p:/, '').trim(); // Meta додає \"p:\" перед телефоном\n\nconst leads = $input.all()\n  .map(item => item.json)\n  .filter(row => row.row_number >= startRow && String(row['Telegram'] ?? '').trim() === '')\n  .filter(row => Object.entries(row).some(([k, v]) => !SKIP.has(k) && String(v ?? '').trim() !== ''))\n  .slice(0, MAX_PER_RUN);\n\nreturn leads.map(row => {\n  const lines = Object.entries(row)\n    .filter(([key, value]) => !SKIP.has(key) && String(value ?? '').trim() !== '')\n    .map(([key, value]) => `${LABELS[key] || key}: ${clean(value)}`);\n  return { json: { row_number: row.row_number, text: '🔥 Новий лід\\n\\n' + lines.join('\\n') } };\n});\n"
+        "jsCode": "// Нові ліди: рядки без позначки в стовпці «Telegram», починаючи з рядка startRow.\nconst cfg = $('Налаштування').first().json;\nconst startRow = Number(cfg.startRow) || 2;\nconst MAX_PER_RUN = 20; // решта піде наступної хвилини\n\n// Підписи для типових стовпців Meta Lead Ads. Інші стовпці показуються під своїми назвами.\nconst LABELS = {\n  created_time: '🕘 Створено',\n  full_name: \"👤 Ім'я\", first_name: \"👤 Ім'я\", last_name: '👤 Прізвище',\n  phone_number: '📞 Телефон', phone: '📞 Телефон', email: '✉️ Email',\n  city: '🏙 Місто', country: '📍 Країна',\n  campaign_name: '📣 Кампанія', adset_name: '📣 Група оголошень', ad_name: '📣 Оголошення',\n  form_name: '📝 Форма', platform: '📱 Платформа',\n};\n// Службові стовпці, які в повідомленні не потрібні.\nconst SKIP = new Set(['row_number', 'Telegram', 'Статус', 'Обновил', 'Обновлено',\n  'id', 'ad_id', 'adset_id', 'campaign_id', 'form_id', 'is_organic']);\n\nconst clean = (key, value) => {\n  const text = String(value).replace(/^p:/, '').trim(); // Meta додає \"p:\" перед телефоном\n  if (key === 'created_time') {\n    const date = DateTime.fromISO(text);\n    if (date.isValid) return date.toFormat('dd.MM.yyyy HH:mm');\n  }\n  return text;\n};\nconst filled = ([key, value]) => !SKIP.has(key) && String(value ?? '').trim() !== '';\n\nconst leads = $input.all()\n  .map(item => item.json)\n  .filter(row => row.row_number >= startRow && String(row['Telegram'] ?? '').trim() === '')\n  .filter(row => Object.entries(row).some(filled))\n  .slice(0, MAX_PER_RUN);\n\nreturn leads.map(row => {\n  const lines = Object.entries(row)\n    .filter(filled)\n    .map(([key, value]) => `${LABELS[key] || key}: ${clean(key, value)}`);\n  return { json: { row_number: row.row_number, text: '🔥 Новий лід\\n\\n' + lines.join('\\n') } };\n});\n"
       },
       "id": "fbe6df8c-357e-5fb1-bb67-4f3eb670150b",
       "name": "Нові ліди",
@@ -105,6 +105,83 @@
       "parameters": {
         "chatId": "={{ $('Налаштування').first().json.chatId }}",
         "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💬 Contacted",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|contacted"
+                    }
+                  },
+                  {
+                    "text": "⭐ Lead (Qualified)",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|qualified"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "No answer",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|no_answer"
+                    }
+                  },
+                  {
+                    "text": "Follow-up",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|follow_up"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Job inquiry",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|job"
+                    }
+                  },
+                  {
+                    "text": "Not relevant",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|not_relevant"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Spam",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|spam"
+                    }
+                  },
+                  {
+                    "text": "Supplier",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $json.row_number }}|supplier"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
         "additionalFields": {
           "appendAttribution": false
         }
@@ -136,7 +213,7 @@
           "mappingMode": "defineBelow",
           "value": {
             "row_number": "={{ $('Нові ліди').item.json.row_number }}",
-            "Telegram": "={{ $now.toFormat('yyyy-MM-dd HH:mm') }}"
+            "Telegram": "={{ $now.toFormat('dd.MM.yyyy HH:mm') }}"
           },
           "matchingColumns": [
             "row_number"
@@ -180,7 +257,8 @@
     {
       "parameters": {
         "updates": [
-          "message"
+          "message",
+          "callback_query"
         ],
         "additionalFields": {}
       },
@@ -190,9 +268,247 @@
       "typeVersion": 1.2,
       "position": [
         0,
-        260
+        300
       ],
       "webhookId": "ec424f55-945d-5e29-8fc8-4897502f9c7e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "420c8a8c-d12b-5799-85d9-4ef5cc87243e",
+              "leftValue": "={{ $json.callback_query !== undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "82902c6f-24a6-580a-915d-b45afc9b2928",
+      "name": "Натиснули кнопку?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Натискання кнопки статусу: callback_data = \"st|<номер рядка>|<код статусу>\".\nconst STATUS = {\n  contacted: 'Contacted',\n  qualified: 'Lead (Qualified)',\n  no_answer: 'No answer',\n  follow_up: 'Follow-up',\n  job: 'Job inquiry',\n  not_relevant: 'Not relevant',\n  spam: 'Spam',\n  supplier: 'Supplier',\n};\nconst q = $('Повідомлення боту').first().json.callback_query;\nconst [, row, code] = String(q.data || '').split('|');\nconst status = STATUS[code] || code;\nconst who = q.from.username ? '@' + q.from.username : [q.from.first_name, q.from.last_name].filter(Boolean).join(' ');\nconst when = $now.toFormat('dd.MM.yyyy HH:mm');\n\n// Текст ліда без попереднього блоку статусу + новий блок.\nconst leadText = String(q.message?.text || '').split('\\n\\n📋 Статус:')[0];\nconst text = `${leadText}\\n\\n📋 Статус: ${status}\\n👤 Обновил: ${who}\\n🕘 Обновлено: ${when}`;\n\nreturn [{ json: {\n  row_number: Number(row), status, who, when, text,\n  chatId: q.message.chat.id, messageId: q.message.message_id, queryId: q.id,\n} }];\n"
+      },
+      "id": "057f81d4-ceeb-5eee-af75-0d262de5e513",
+      "name": "Розібрати натискання",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetUrl }}",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Налаштування').first().json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Статус": "={{ $json.status }}",
+            "Обновил": "={{ $json.who }}",
+            "Обновлено": "={{ $json.when }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Обновил",
+              "displayName": "Обновил",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Обновлено",
+              "displayName": "Обновлено",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "b3138484-87e8-59a5-93d2-d4d5caa89f24",
+      "name": "Записати статус",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "editMessageText",
+        "chatId": "={{ $('Розібрати натискання').item.json.chatId }}",
+        "messageId": "={{ $('Розібрати натискання').item.json.messageId }}",
+        "text": "={{ $('Розібрати натискання').item.json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💬 Contacted",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|contacted"
+                    }
+                  },
+                  {
+                    "text": "⭐ Lead (Qualified)",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|qualified"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "No answer",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|no_answer"
+                    }
+                  },
+                  {
+                    "text": "Follow-up",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|follow_up"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Job inquiry",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|job"
+                    }
+                  },
+                  {
+                    "text": "Not relevant",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|not_relevant"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Spam",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|spam"
+                    }
+                  },
+                  {
+                    "text": "Supplier",
+                    "additionalFields": {
+                      "callback_data": "=st|{{ $('Розібрати натискання').item.json.row_number }}|supplier"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "ae88d103-260f-56e4-9aae-cfc4f63f1b2b",
+      "name": "Оновити повідомлення",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Розібрати натискання').item.json.queryId }}",
+        "additionalFields": {
+          "text": "=Статус: {{ $('Розібрати натискання').item.json.status }}"
+        }
+      },
+      "id": "8c0decff-7e69-5e68-b012-381a584d5480",
+      "name": "Відповісти на натискання",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        220
+      ]
     },
     {
       "parameters": {
@@ -207,8 +523,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        220,
-        260
+        440,
+        400
       ]
     }
   ],
@@ -272,7 +588,58 @@
       "main": [
         [
           {
+            "node": "Натиснули кнопку?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Натиснули кнопку?": {
+      "main": [
+        [
+          {
+            "node": "Розібрати натискання",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Відповісти chat ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Розібрати натискання": {
+      "main": [
+        [
+          {
+            "node": "Записати статус",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Записати статус": {
+      "main": [
+        [
+          {
+            "node": "Оновити повідомлення",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Оновити повідомлення": {
+      "main": [
+        [
+          {
+            "node": "Відповісти на натискання",
             "type": "main",
             "index": 0
           }
